@@ -72,4 +72,10 @@ class FixedLR(_LRScheduler):
         super(FixedLR, self).__init__(optimizer, last_epoch)
 
     def get_lr(self):
-        return self.schedule[self.last_epoch]
+        return [self.schedule[self.last_epoch]]
+
+    def get_rate(self, epoch=None, num_epoches=None):
+        self.trn_iterations += 1
+        self.clr_iterations += 1
+        lr = self.clr()
+        return lr
