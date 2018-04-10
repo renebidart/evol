@@ -82,16 +82,19 @@ def evolve(pop_perf):
 
     # Randomly mutate the networks we're keeping, and add these
     # This preserves the already good networks, so we don't lose out. 
+    mutated = []
     for index, individual in enumerate(parents):
-        parents.append(mutate(parents[index]))
+        mutated.append(mutate(parents[index]))
+    parents.extend(mutated)
 
     # For those we aren't keeping, randomly add one to increase variance. Also mutate it??
-    parents.append(mutate(pop[retain_length:]))
+    parents.append(mutate(random.choice(pop[retain_length:])))
 
     # Now find out how many spots we have left to fill. (how many children to make, little under 50% of full pop)
     parents_length = len(parents)
     desired_length = len(pop) - parents_length
     children = []
+
 
     # Add children, which are bred from two remaining networks.
     while len(children) < desired_length:

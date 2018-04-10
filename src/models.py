@@ -22,6 +22,65 @@ from scheduler import*
 # not good:
 cuda='True'
 
+
+def CFIAR_data_loaders(base_data_dir, train_samples_index, valid_samples_index, kwargs, batch_size=64):
+    """Make train, validation, test data loaders for MNIST dataset. Limited augmnetation, nothing fancy
+    
+    Arguments:
+        train_samples_index: index of the train samples  ???(what is this index based off???)
+        valid_samples_index: index of the valid samples
+        batch_size: 
+    """
+
+    class ChunkSampler(sampler.Sampler):
+        """Samples elements sequentially from some offset. 
+        
+        Argument:
+            samples_index: index of desired samples
+        """
+        def __init__(self, samples_index):
+            self.samples_index = samples_index
+
+        def __iter__(self):
+            return iter(self.samples_index)
+    
+        def __len__(self):
+            return len(self.samples_index)
+
+
+    train_set = datasets.CIFAR10(base_data_dir, train=True, download=False,
+                       transform=transforms.Compose([
+                           transforms.RandomRotation(15),
+                           transforms.ToTensor(),
+                           transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+                       ]))
+    train_loader = torch.utils.data.DataLoader(
+        train_set,
+        batch_size=batch_size, **kwargs,
+        sampler=ChunkSampler(train_samples_index))
+
+
+    valid_set = datasets.CIFAR10(base_data_dir, train=True, transform=transforms.Compose([
+                           transforms.ToTensor(),
+                           transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+                       ]))
+    valid_loader = torch.utils.data.DataLoader(
+        valid_set,
+        batch_size=batch_size, **kwargs,
+        sampler=ChunkSampler(valid_samples_index))
+
+    test_set = datasets.CIFAR10(base_data_dir, train=False, transform=transforms.Compose([
+                           transforms.ToTensor(),
+                           transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+                       ]))
+    test_loader = torch.utils.data.DataLoader(
+        test_set,
+        batch_size=batch_size, shuffle=True, **kwargs)
+
+    return(train_loader, valid_loader, test_loader)
+
+
+
 def MNIST_data_loaders(base_data_dir, train_samples_index, valid_samples_index, kwargs, batch_size=64):
     """Make train, validation, test data loaders for MNIST dataset. Limited augmnetation, nothing fancy
     

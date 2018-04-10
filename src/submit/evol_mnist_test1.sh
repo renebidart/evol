@@ -9,4 +9,4 @@
 module load cuda cudnn python/3.5.2
 source pytorch/bin/activate
 
-python /home/rbbidart/learn-lr/src/evol_mnist_test.py --data_loc /home/rbbidart/project/rbbidart/learn-lr/data --out_loc /home/rbbidart/project/rbbidart/learn-lr/output --generations 50 --num_schedules 12 --epochs 5
+python /home/rbbidart/learn-lr/src/evol_mnist_test.py --data_loc /home/rbbidart/project/rbbidart/learn-lr/data --out_loc /home/rbbidart/project/rbbidart/learn-lr/output_r2 --generations 50 --num_schedules 12 --epochs 5
