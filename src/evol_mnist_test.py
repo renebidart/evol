@@ -3,7 +3,7 @@ from genetic import*
 import sys
 import argparse
 
-# Assume runnign on GPU so cuda will be enabled
+# Assume running on GPU so cuda will be enabled
 
 def main(args):
     import os
