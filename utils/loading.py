@@ -15,7 +15,7 @@ import torchvision
 import torchvision.transforms as transforms
 from torch.utils.data.dataset import Dataset
 
-from models.preact_resnet import PreActResNet
+from models.preact_resnet import PreActResNet18
 from models.Nets import SimpleNetMNIST
 
 

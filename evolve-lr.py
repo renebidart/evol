@@ -57,7 +57,13 @@ def main(args):
 
     es = cma.CMAEvolutionStrategy(NPARAMS * [-2], 1) # solutions generated from N(-2, 1), but transformed to 10^sol
 
-    history = []
+    history = {}
+    history['xbest'] = []
+    history['fbest'] = []
+    history['xfavorite'] = []
+    history['NPOPULATION'] = NPOPULATION
+    history['MAX_GENERATIONS'] = MAX_GENERATIONS
+
     for j in tqdm(range(MAX_GENERATIONS)):
         solutions = es.ask()
         fitness_list = np.zeros(es.popsize)
@@ -84,8 +90,10 @@ def main(args):
         es.tell(solutions, fitness_list)
         # es.logger.add()
         es.disp()
-        result = es.result # first element is the best solution, second element is the best fitness
-        history.append(result)
+        result = es.result
+        history['xbest'].append(result.xbest)
+        history['fbest'].append(result.fbest)
+        history['xfavorite'].append(result.xfavorite) # this is a weird one, maybe try it out
         print("fitness at generation", (j+1), result[1])
     print("local optimum discovered by solver:\n", result[0])
     print("fitness score at this local optimum:", result[1])
