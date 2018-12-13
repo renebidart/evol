@@ -1,2 +1,1 @@
-# learn_lr
-Learning learning rate schedules
+#### CMA-ES is all you need

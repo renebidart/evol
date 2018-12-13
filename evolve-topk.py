@@ -18,7 +18,7 @@ from utils.data import make_generators_DF_cifar, make_generators_DF_MNIST
 from utils.loading import net_from_args
 from utils.scheduler import ListScheduler
 from utils.train_val import train_net_evol
-from models.PResNetTopK import PResNetTopK18
+from models.PResNetTopK import get_PResNetTopK18
 
 
 parser = argparse.ArgumentParser(description='Training')
@@ -51,7 +51,7 @@ def main(args):
     NPOPULATION = int(args.NPOPULATION)  # population size
     MAX_GENERATIONS = int(args.MAX_GENERATIONS)  # number of generations
     
-    within_block_act, after_block_act = str(within_block_act), str(after_block_act)
+    within_block_act, after_block_act = str(args.within_block_act), str(args.after_block_act)
     model_name = 'PResNetTopK-'+str(within_block_act)+'_'+str(after_block_act)
 
     SAVE_PATH = Path(args.SAVE_PATH)
@@ -59,7 +59,6 @@ def main(args):
     with open(args.files_df_loc, 'rb') as f:
         files_df = pickle.load(f)
         
-    epochs = 60
     group_list = [1, 1, 1, 1]
     
     # solutions generated from N(0, 1). later transformed [0, 1] with inv cdf
@@ -87,11 +86,11 @@ def main(args):
         # evaluate each set of learning rates, using new model each time:
         for i in range(es.popsize):
             # convert the normal to a topk probability:
-            topk_list = [norm.cdf(x) for x in solutions]
-            
+            topk_list = [norm.cdf(x) for x in solutions[i]]
+            print('topk_list', topk_list)
             # Create a model with this topk and train it:
-            model = PResNetTopK18(block, num_blocks, within_block_act=within_block_act, after_block_act=after_block_act, 
-                                  frac_list=topk_list, group_list=group_list, num_classes=10)
+            model = get_PResNetTopK18(within_block_act=within_block_act, after_block_act=after_block_act, 
+                                      frac_list=topk_list, group_list=group_list, num_classes=10)
             model = model.to(device)
             metrics = train_net_evol(model, dataloaders, batch_size, epochs, device)
             

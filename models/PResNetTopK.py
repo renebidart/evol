@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from layers import SpatialTopK
+from models.layers.SpatialTopK import SpatialTopK
 
 
 class PreActBlock(nn.Module):
@@ -25,10 +25,10 @@ class PreActBlock(nn.Module):
     def forward(self, x):
         out = self.bn1(x)
         out = self.activation(out) if hasattr(self, 'activation') else out
-        shortcut = self.shortcut(out) if hasattr(self, 'shortcut') else x
+        shortcut = self.shortcut(out) if hasattr(self, 'shortcut') else out
         out = self.conv1(out)
 
-        out = self.bn2(x)
+        out = self.bn2(out)
         out = self.activation(out) if hasattr(self, 'activation') else out
         out = self.conv2(out)
         out += shortcut
@@ -89,10 +89,10 @@ class PResNetTopK(nn.Module):
 
         self.in_planes = 64
         self.conv1 = nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1, bias=False)
-        self.layer1 = self._make_layer(block, 64, num_blocks[0], stride=1, get_activation(within_block_act, frac=frac_list[0], groups=group_list[0]))
-        self.layer2 = self._make_layer(block, 128, num_blocks[1], stride=2, get_activation(within_block_act, frac=frac_list[1], groups=group_list[1]))
-        self.layer3 = self._make_layer(block, 256, num_blocks[2], stride=2, get_activation(within_block_act, frac=frac_list[2], groups=group_list[2]))
-        self.layer4 = self._make_layer(block, 512, num_blocks[3], stride=2, get_activation(within_block_act, frac=frac_list[3], groups=group_list[3]))
+        self.layer1 = self._make_layer(block, 64, num_blocks[0], stride=1, activation=get_activation(within_block_act, frac=frac_list[0], groups=group_list[0]))
+        self.layer2 = self._make_layer(block, 128, num_blocks[1], stride=2, activation=get_activation(within_block_act, frac=frac_list[1], groups=group_list[1]))
+        self.layer3 = self._make_layer(block, 256, num_blocks[2], stride=2, activation=get_activation(within_block_act, frac=frac_list[2], groups=group_list[2]))
+        self.layer4 = self._make_layer(block, 512, num_blocks[3], stride=2, activation=get_activation(within_block_act, frac=frac_list[3], groups=group_list[3]))
         self.linear = nn.Linear(512*block.expansion, num_classes)
 
     def _make_layer(self, block, planes, num_blocks, stride, activation):
@@ -119,31 +119,21 @@ class PResNetTopK(nn.Module):
         return out
 
 
-    
 def get_activation(activation, frac=.25, groups=1):
     if (activation == 'relu'):
         activation = nn.ReLU()
     elif (activation == 'topk'):
         activation = SpatialTopK(topk=1, frac=frac, groups=groups)
     else:
-        print('No Activation')
         activation = None
     return activation
-    
 
 
 # Presnet 18 has 4 blocks with layers: [2,2,2,2] and corresponding num features: [64, 128, 256, 512]
-class PResNetTopK18(PResNetTopK):
-    def __init__(self, block, num_blocks, within_block_act, after_block_act, 
-                 frac_list, group_list, num_classes=10):
-        super(PResNetTopK18, self).__init__()
-        self.block = PreActBlock
-        self.num_blocks = [2,2,2,2]
-        self.within_block_act = within_block_act
-        self.after_block_act = after_block_act
-        self.frac_list = frac_list
-        self.group_list = group_list
-        self.num_classes = num_classes
+def get_PResNetTopK18(within_block_act, after_block_act,
+                      frac_list, group_list, num_classes=10):
+    return PResNetTopK(PreActBlock, [2,2,2,2], within_block_act,  after_block_act, 
+                       frac_list, group_list, num_classes)
 
 
 
