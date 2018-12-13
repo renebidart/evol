@@ -12,12 +12,13 @@ from torch import nn
 import torch.optim as optim
 from torch.optim import lr_scheduler
 import cma
-# from es import CMAES
+from scipy.stats import norm
 
 from utils.data import make_generators_DF_cifar, make_generators_DF_MNIST
 from utils.loading import net_from_args
 from utils.scheduler import ListScheduler
-from utils.train_val import train_net
+from utils.train_val import train_net_evol
+from models.PResNetTopK import PResNetTopK18
 
 
 parser = argparse.ArgumentParser(description='Training')
@@ -26,37 +27,43 @@ parser.add_argument('--SAVE_PATH', type=str)
 parser.add_argument('--device', type=str)
 
 # Defining the model/evol:
-parser.add_argument('--net_type', default='wide-resnet', type=str, help='model')
-parser.add_argument('--depth', default=18, type=int, help='depth of model')
+parser.add_argument('--within_block_act', default='relu', type=str)
+parser.add_argument('--after_block_act', default=None, type=str)
 parser.add_argument('--MAX_GENERATIONS', default=20, type=int)
 parser.add_argument('--NPOPULATION', default=20, type=int)
 
 # training params
 parser.add_argument('--epochs', default=10, type=int)
-parser.add_argument('--dataset', default='MNIST', type=str)
-parser.add_argument('--batch_size', default=128, type=int)
+parser.add_argument('--dataset', default='CIFAR', type=str)
+parser.add_argument('--batch_size', default=256, type=int)
 parser.add_argument('--num_workers', default=4, type=int)
-parser.add_argument('--IM_SIZE', default=28, type= int)
+parser.add_argument('--IM_SIZE', default=32, type= int)
 args = parser.parse_args()
 
 
 def main(args):
+    """Evolve to find the optimal top k-pooling for each layer / block"""
     print('CUDA VERSION:', torch.version.cuda)
-    batch_size, num_workers = int(args.batch_size), int(args.num_workers)
-    IM_SIZE = int(args.IM_SIZE)
+    batch_size, num_workers, IM_SIZE, epochs= int(args.batch_size), int(args.num_workers), int(args.IM_SIZE), int(args.epochs)
     device = torch.device(args.device)
 
-    NPARAMS = int(args.epochs)  # one learning rate (parameter) per epoch
+    NPARAMS = 4 # there are 4 blocks for topk
     NPOPULATION = int(args.NPOPULATION)  # population size
     MAX_GENERATIONS = int(args.MAX_GENERATIONS)  # number of generations
+    
+    within_block_act, after_block_act = str(within_block_act), str(after_block_act)
+    model_name = 'PResNetTopK-'+str(within_block_act)+'_'+str(after_block_act)
 
     SAVE_PATH = Path(args.SAVE_PATH)
     SAVE_PATH.mkdir(parents=True, exist_ok=True)
     with open(args.files_df_loc, 'rb') as f:
         files_df = pickle.load(f)
-
-    # is std of 2 the right way? or too much?. Normally use +13 std for sol, but because using smaller pop use larger one.
-    es = cma.CMAEvolutionStrategy(NPARAMS * [-2], 2) # solutions generated from N(-2, 1), but transformed to 10^sol
+        
+    epochs = 60
+    group_list = [1, 1, 1, 1]
+    
+    # solutions generated from N(0, 1). later transformed [0, 1] with inv cdf
+    es = cma.CMAEvolutionStrategy(NPARAMS * [0], 1)
 
     history = {}
     history['xbest'] = []
@@ -79,13 +86,15 @@ def main(args):
 
         # evaluate each set of learning rates, using new model each time:
         for i in range(es.popsize):
-            model, model_name = net_from_args(args, num_classes=10, IM_SIZE=IM_SIZE)
+            # convert the normal to a topk probability:
+            topk_list = [norm.cdf(x) for x in solutions]
+            
+            # Create a model with this topk and train it:
+            model = PResNetTopK18(block, num_blocks, within_block_act=within_block_act, after_block_act=after_block_act, 
+                                  frac_list=topk_list, group_list=group_list, num_classes=10)
             model = model.to(device)
-
-            # convert the exponenet to a learning rate:
-            lr_list = np.power(10, solutions[i]).tolist()
-            # Train it for the given lr list:
-            metrics = train_net(model, dataloaders, lr_list, batch_size, device)
+            metrics = train_net_evol(model, dataloaders, batch_size, epochs, device)
+            
             # the fitness is the best validation accuracy *-1, because it tries to minimize
             fitness_list[i] = -1 * metrics['best_val_acc']
         es.tell(solutions, fitness_list)

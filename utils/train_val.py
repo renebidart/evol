@@ -20,6 +20,39 @@ import torch.optim as optim
 from utils.scheduler import ListScheduler
 
 
+def train_net_evol(model, dataloaders, batch_size, epochs, device):
+    with torch.cuda.device(device.index):
+        # ??? Maybne change this to a loading function to do adam, etc.
+        criterion = nn.CrossEntropyLoss()
+        optimizer = optim.SGD(model.parameters(), lr=.01, momentum=0.9, weight_decay=5e-4)
+        scheduler = lr_scheduler.StepLR(optimizer, step_size=int(epochs/4), gamma=0.2) # close enough
+
+        metrics = {}
+        metrics['train_top1_acc'] = []
+        metrics['train_losses'] = []
+        metrics['val_top1_acc'] = []
+        metrics['val_losses'] = []
+        metrics['best_val_acc'] = 0
+
+        for epoch in range(int(epochs)):
+            # train for one epoch
+            train_top1_acc, train_losses = train_epoch(dataloaders['train'], model, criterion, optimizer, epoch, device)
+            metrics['train_top1_acc'].append(train_top1_acc)
+            metrics['train_losses'].append(train_losses)
+
+            # evaluate on validation set
+            val_top1_acc, val_losses = validate_epoch(dataloaders['val'], model, device, criterion=None)
+            metrics['val_top1_acc'].append(val_top1_acc)
+            metrics['val_losses'].append(val_losses)
+            
+            scheduler.step()
+
+            # remember best validation accuracy
+            is_best = val_top1_acc > metrics['best_val_acc']
+            metrics['best_val_acc'] = max(val_top1_acc, metrics['best_val_acc'])
+        return metrics
+
+
 def train_net(model, dataloaders, lr_list, batch_size, device):
     with torch.cuda.device(device.index):
         # ??? Maybne change this to a loading function to do adam, etc.
