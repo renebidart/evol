@@ -87,9 +87,8 @@ def main(args):
         for i in range(es.popsize):
             # convert the normal to a topk probability:
             topk_list = [norm.cdf(x) for x in solutions[i]]
-            print('topk_list', topk_list)
             # Create a model with this topk and train it:
-            model = get_PResNetTopK18(within_block_act=within_block_act, after_block_act=after_block_act, 
+            model = get_PResNetTopK18(within_block_act=within_block_act, after_block_act=after_block_act,
                                       frac_list=topk_list, group_list=group_list, num_classes=10)
             model = model.to(device)
             metrics = train_net_evol(model, dataloaders, batch_size, epochs, device)

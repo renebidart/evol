@@ -35,7 +35,6 @@ def train_net_evol(model, dataloaders, batch_size, epochs, device):
         metrics['best_val_acc'] = 0
 
         for epoch in range(int(epochs)):
-            print(f'epoch {epoch}')
             # train for one epoch
             train_top1_acc, train_losses = train_epoch(dataloaders['train'], model, criterion, optimizer, epoch, device)
             metrics['train_top1_acc'].append(train_top1_acc)

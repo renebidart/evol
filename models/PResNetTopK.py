@@ -105,13 +105,13 @@ class PResNetTopK(nn.Module):
 
     def forward(self, x): # ugly maybe switch to a loop
         out = self.conv1(x)
-        out = self.activations[0](out) if self.after_block_activations[0] else out
+        out = self.after_block_activations[0](out) if self.after_block_activations else out
         out = self.layer1(out)
-        out = self.activations[1](out) if self.after_block_activations[1] else out
+        out = self.after_block_activations[1](out) if self.after_block_activations else out
         out = self.layer2(out)
-        out = self.activations[2](out) if self.after_block_activations[2] else out
+        out = self.after_block_activations[2](out) if self.after_block_activations else out
         out = self.layer3(out)
-        out = self.activations[3](out) if self.after_block_activations[3] else out
+        out = self.after_block_activations[3](out) if self.after_block_activations else out
         out = self.layer4(out)
         out = F.avg_pool2d(out, 4)
         out = out.view(out.size(0), -1)
